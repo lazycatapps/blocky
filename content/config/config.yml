@@ -1,0 +1,298 @@
+# Blocky DNS Configuration
+# Full documentation: https://0xerr0r.github.io/blocky/latest/configuration/
+
+# =============================================================================
+# Upstream DNS Servers
+# =============================================================================
+upstreams:
+  # Query timeout for upstream servers (default: 2s)
+  timeout: 2s
+
+  # Strategy: parallel_best (default) | random | strict
+  # - parallel_best: Race 2 random resolvers, return fastest response
+  # - random: Use single random resolver per query
+  # - strict: Try resolvers sequentially
+  strategy: parallel_best
+
+  groups:
+    # Default group is mandatory - at least one upstream DNS server required
+    default:
+      # Public DNS servers (plaintext UDP/TCP on port 53)
+      - 8.8.8.8          # Google DNS
+      - 1.1.1.1          # Cloudflare DNS
+
+      # DNS over TLS (DoT) - format: tcp-tls:hostname:853
+      - tcp-tls:fdns1.dismail.de:853
+
+      # DNS over HTTPS (DoH) - format: https://hostname/path
+      - https://dns.digitale-gesellschaft.ch/dns-query
+
+    # Example: Custom upstream group for specific domains (see conditional section)
+    # local:
+    #   - 192.168.1.1
+
+# =============================================================================
+# Custom DNS Mappings
+# =============================================================================
+# customDNS:
+#   # TTL for custom mappings (default: 1h)
+#   customTTL: 1h
+#
+#   # Simple hostname to IP mappings
+#   mapping:
+#     printer.lan: 192.168.1.10
+#     nas.lan: 192.168.1.20,2001:db8::20  # IPv4 and IPv6
+#
+#   # Domain rewriting (e.g., home -> lan)
+#   rewrite:
+#     home: lan
+#
+#   # Filter unmapped record types (default: true)
+#   # If true, return empty response for types not in mapping
+#   # If false, forward to upstream
+#   filterUnmappedTypes: true
+
+# =============================================================================
+# Conditional DNS (Route specific domains to specific upstreams)
+# =============================================================================
+# conditional:
+#   # Rewrite domains before conditional lookup
+#   rewrite:
+#     company.com: internal.local
+#
+#   # Map domains to specific upstream resolvers
+#   mapping:
+#     internal.local: 192.168.1.1
+#     lan: 192.168.1.1,192.168.1.2
+#
+#   # Fallback to default upstream if conditional fails (default: false)
+#   fallbackUpstream: false
+
+# =============================================================================
+# Blocking Configuration
+# =============================================================================
+blocking:
+  # Define blocklists (denylists)
+  denylists:
+    ads:
+      # Local StevenBlack hosts file (use 'make download-hosts' to update)
+      # https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+      - /lzcapp/pkg/content/config/hosts
+
+      # Additional popular blocklists (uncomment to enable):
+      # - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro-onlydomains.txt
+      # - https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt
+
+      # Local blocklist file (create your own)
+      # - /etc/blocky/custom-blocklist.txt
+
+      # Inline blocklist
+      # - |
+      #   unwanted-domain.com
+      #   *.ads-server.com
+
+    # Example: Additional blocklist categories
+    # trackers:
+    #   - https://raw.githubusercontent.com/StevenBlack/hosts/master/data/add.2o7Net/hosts
+    # malware:
+    #   - https://raw.githubusercontent.com/StevenBlack/hosts/master/data/add.Risk/hosts
+
+  # Allowlists (override denylists)
+  # allowlists:
+  #   ads:
+  #     - |
+  #       safe-ads-domain.com
+  #       /^analytics\.company\.com$/
+
+  # Assign blocklists to client groups
+  clientGroupsBlock:
+    # Default group applies to all clients
+    default:
+      - ads
+      # - trackers
+      # - malware
+
+    # Example: Client-specific blocking (by name, IP, or CIDR)
+    # kids-laptop*:
+    #   - ads
+    #   - adult
+    # 192.168.1.100:
+    #   - ads
+    # 192.168.1.0/24:
+    #   - ads
+
+  # Block response type: zeroIp (default) | nxDomain | custom IPs
+  # - zeroIp: Return 0.0.0.0 or ::
+  # - nxDomain: Return NXDOMAIN response code
+  # - Custom: Comma-separated IP addresses
+  blockType: zeroIp
+
+  # TTL for blocked responses (default: 6h)
+  blockTTL: 1m
+
+  # Blocklist loading configuration
+  loading:
+    # Refresh period for remote lists (default: 4h)
+    refreshPeriod: 24h
+
+    # Strategy: blocking | failOnError | fast
+    strategy: failOnError
+
+    # Max errors per source before considering list failed
+    maxErrorsPerSource: 5
+
+    downloads:
+      timeout: 60s
+      attempts: 5
+      cooldown: 10s
+
+    # Concurrent downloads (default: 4)
+    concurrency: 16
+
+# =============================================================================
+# Caching Configuration
+# =============================================================================
+caching:
+  # Minimum cache time (override low TTLs)
+  minTime: 5m
+
+  # Maximum cache time (override high TTLs)
+  maxTime: 30m
+
+  # Max items in cache (0 = unlimited)
+  maxItemsCount: 0
+
+  # Cache time for negative responses (NXDOMAIN)
+  cacheTimeNegative: 30m
+
+  # Prefetching: Reload popular domains before cache expires
+  prefetching: false
+
+  # Threshold: Query count to consider domain "popular" for prefetching
+  prefetchThreshold: 5
+
+  # Exclude domains from caching (regex)
+  # exclude:
+  #   - /.*\.lan$/
+
+# =============================================================================
+# Client Lookup (Identify clients by name)
+# =============================================================================
+# clientLookup:
+#   # Upstream DNS for reverse DNS lookups
+#   upstream: 192.168.1.1
+#
+#   # Order for resolving single-name labels in rDNS results
+#   singleNameOrder:
+#     - 2  # Second label
+#     - 1  # First label
+#
+#   # Static client name mappings
+#   clients:
+#     laptop:
+#       - 192.168.1.100
+#     desktop:
+#       - 192.168.1.101
+
+# =============================================================================
+# Query Logging
+# =============================================================================
+# queryLog:
+#   # Type: mysql | postgresql | csv | csv-client | console | none
+#   type: console
+#
+#   # Target depends on type:
+#   # - mysql/postgresql: DSN connection string
+#   # - csv: directory path
+#   # - console: stdout
+#   # target: /logs
+#
+#   # Log retention in days (database types only)
+#   # logRetentionDays: 7
+#
+#   # Fields to log
+#   fields:
+#     - clientIP
+#     - clientName
+#     - responseReason
+#     - question
+#     - duration
+#
+#   # Flush interval for batched writes
+#   # flushInterval: 30s
+
+# =============================================================================
+# Ports Configuration
+# =============================================================================
+ports:
+  # DNS port (TCP/UDP) - standard port 53
+  # Note: Container port 53; host port mapping via BLOCKY_DNS_PORT in .env
+  dns: 53
+
+  # HTTP API/metrics port
+  http: 4000
+
+  # Optional: DNS over TLS (DoT) port
+  # tls: 853
+
+  # Optional: HTTPS API port
+  # https: 443
+
+# =============================================================================
+# Prometheus Metrics
+# =============================================================================
+prometheus:
+  enable: true
+  path: /metrics
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+log:
+  # Level: trace | debug | info (default) | warn | error
+  level: info
+
+  # Format: text (default) | json
+  format: text
+
+  # Include timestamps (default: true)
+  timestamp: true
+
+  # Privacy: Obfuscate alphanumeric characters with * (default: false)
+  # privacy: false
+
+# =============================================================================
+# Advanced Options (Uncomment to customize)
+# =============================================================================
+
+# # Hosts file configuration
+# hostsFile:
+#   sources:
+#     - /etc/hosts
+#   hostsTTL: 1h
+#   filterLoopback: false
+
+# # EDNS Client Subnet (ECS)
+# ecs:
+#   useAsClient: true
+#   forward: true
+
+# # Filter specific query types (e.g., disable IPv6)
+# filtering:
+#   queryTypes:
+#     - AAAA
+
+# # Require FQDN (Fully Qualified Domain Names)
+# fqdnOnly:
+#   enable: false
+
+# # Special Use Domains (RFC 6762 Appendix G)
+# specialUseDomains:
+#   rfc6762-appendixG: true
+
+# # Redis for multi-instance synchronization
+# redis:
+#   address: redis:6379
+#   password: ""
+#   database: 0
+#   required: false

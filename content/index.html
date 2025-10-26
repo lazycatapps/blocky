@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blocky - 快速轻量的 DNS 代理和广告拦截器 | Lazycat 应用</title>
+    <style>
+        :root {
+            --primary-color: #0066cc;
+            --secondary-color: #00aaff;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+            --dark-color: #343a40;
+            --light-color: #f8f9fa;
+            --border-color: #dee2e6;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0066cc 0%, #00aaff 100%);
+            color: white;
+            padding: 2rem 0;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+        }
+
+        .lang-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .lang-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            padding: 2rem;
+            transition: box-shadow 0.3s;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            margin: 1.5rem 0 1rem;
+            color: var(--dark-color);
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            border-color: var(--info-color);
+            color: #0c5460;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            border-color: var(--success-color);
+            color: #155724;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            border-color: var(--warning-color);
+            color: #856404;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .feature-item {
+            padding: 1.5rem;
+            background: var(--light-color);
+            border-radius: 6px;
+            border-left: 4px solid var(--primary-color);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .feature-item:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+        }
+
+        .feature-item h4 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .steps {
+            counter-reset: step-counter;
+            list-style: none;
+        }
+
+        .steps li {
+            counter-increment: step-counter;
+            margin: 1rem 0;
+            padding-left: 3rem;
+            position: relative;
+        }
+
+        .steps li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: var(--primary-color);
+            color: white;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e83e8c;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background: #0052a3;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+        }
+
+        .btn-secondary:hover {
+            background: #0088cc;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--light-color);
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .footer {
+            background: var(--dark-color);
+            color: white;
+            text-align: center;
+            padding: 2rem 1rem;
+            margin-top: 2rem;
+        }
+
+        .footer a {
+            color: var(--secondary-color);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .badge-required {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .badge-optional {
+            background: var(--info-color);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div>
+                <h1 class="content-zh">Blocky - DNS 代理和广告拦截器</h1>
+                <h1 class="content-en hidden">Blocky - DNS Proxy & Ad Blocker</h1>
+                <p class="content-zh">快速、轻量级的 DNS 代理,专为本地网络设计</p>
+                <p class="content-en hidden">Fast, lightweight DNS proxy designed for local networks</p>
+            </div>
+            <button class="lang-toggle" onclick="toggleLanguage()">
+                <span class="content-zh">English</span>
+                <span class="content-en hidden">中文</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Chinese Content -->
+        <div class="content-zh">
+            <div class="card" style="background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-left: 5px solid var(--primary-color);">
+                <h2 style="color: var(--primary-color); margin-bottom: 1.5rem;">🚀 快速访问</h2>
+                <p style="font-size: 1.1rem; margin-bottom: 1rem;">访问 Blocky 管理 API 和监控接口:</p>
+                <div style="text-align: center; margin: 1.5rem 0;">
+                    <a href="#" id="api-link" target="_blank" class="btn" style="font-size: 1.2rem; padding: 1rem 2rem; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);">
+                        📡 访问 Blocky API 控制台
+                    </a>
+                </div>
+                <div style="background: white; padding: 1rem; border-radius: 6px; margin-top: 1rem;">
+                    <p style="margin: 0.5rem 0;"><strong>API 端点:</strong> <code id="api-url"></code></p>
+                    <p style="margin: 0.5rem 0;"><strong>监控指标:</strong> <code id="metrics-url"></code></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>项目简介</h2>
+                <p>Blocky 是一个高性能的 DNS 代理服务器,主要用于本地网络环境中拦截广告、追踪器和恶意域名。它采用 Go 语言开发,具有出色的性能和极低的资源占用。</p>
+                <div class="alert alert-success">
+                    <strong>🎉 一键部署!</strong> 通过 <a href="https://lazycat.cloud/appstore" target="_blank">Lazycat 应用市场</a>,您可以快速部署 Blocky,无需手动配置复杂的 Docker 环境。
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>主要功能</h2>
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <h4>🛡️ 广告和追踪器拦截</h4>
+                        <p>基于可自定义的黑名单拦截广告、追踪器和恶意域名</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>📋 多种拦截列表支持</h4>
+                        <p>支持多种格式的拦截列表,包括 hosts 文件和域名列表</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>👥 客户端分组</h4>
+                        <p>为不同客户端配置不同的拦截规则和上游 DNS 服务器</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>⚡ DNS 缓存</h4>
+                        <p>内置智能缓存机制,提升 DNS 查询速度</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>🔀 条件转发</h4>
+                        <p>根据域名条件转发到不同的上游 DNS 服务器</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>🔒 DoH 和 DoT 支持</h4>
+                        <p>支持 DNS over HTTPS (DoH) 和 DNS over TLS (DoT)</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>📊 查询日志</h4>
+                        <p>可选的查询日志记录,便于监控和调试</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>🔌 REST API</h4>
+                        <p>提供 REST API 接口用于管理和监控</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>📈 Prometheus 监控</h4>
+                        <p>内置 Prometheus 指标导出,便于集成监控系统</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>快速开始</h2>
+                <h3>在 Lazycat 平台部署</h3>
+                <ol class="steps">
+                    <li>访问 <a href="https://lazycat.cloud/appstore" target="_blank">Lazycat 应用市场</a></li>
+                    <li>搜索并选择 "Blocky"</li>
+                    <li>点击"一键部署"按钮</li>
+                    <li>根据需要调整配置参数</li>
+                    <li>完成部署后即可使用</li>
+                </ol>
+            </div>
+
+            <div class="card">
+                <h2>使用指南</h2>
+
+                <h3>访问 API 和监控</h3>
+                <p>部署成功后,您可以通过以下方式访问 Blocky 的管理接口:</p>
+
+                <div class="alert alert-info">
+                    <strong>📌 访问地址:</strong> 以您的应用域名为例:
+                    <ul style="margin-top: 0.5rem;">
+                        <li><strong>API 地址:</strong> <code id="usage-api-url"></code></li>
+                        <li><strong>Prometheus 指标:</strong> <code id="usage-metrics-url"></code></li>
+                    </ul>
+                </div>
+
+                <h3>常用 API 端点</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>端点</th>
+                                <th>方法</th>
+                                <th>描述</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/api/blocking/status</code></td>
+                                <td>GET</td>
+                                <td>获取拦截功能状态</td>
+                            </tr>
+                            <tr>
+                                <td><code>/api/blocking/enable</code></td>
+                                <td>GET</td>
+                                <td>启用拦截功能</td>
+                            </tr>
+                            <tr>
+                                <td><code>/api/blocking/disable</code></td>
+                                <td>GET</td>
+                                <td>临时禁用拦截功能</td>
+                            </tr>
+                            <tr>
+                                <td><code>/api/lists/refresh</code></td>
+                                <td>POST</td>
+                                <td>刷新拦截列表</td>
+                            </tr>
+                            <tr>
+                                <td><code>/api/query?domain=example.com</code></td>
+                                <td>GET</td>
+                                <td>测试域名查询</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>配置 DNS 客户端</h3>
+                <p>要使用 Blocky 作为 DNS 服务器,需要将局域网设备的 DNS 设置指向 Blocky 服务器。</p>
+
+                <div class="alert alert-warning">
+                    <strong>⚠️ 重要:</strong> Blocky 的 DNS 端口(53)默认仅在容器内网可用。要在局域网中使用,需要配置端口转发。
+                </div>
+
+                <h4>步骤 1: 部署 Port Forwarder 应用</h4>
+                <p>为了让局域网设备能够使用 Blocky 作为 DNS 服务器,您需要:</p>
+                <ol class="steps">
+                    <li>在 <a href="https://lazycat.cloud/appstore" target="_blank">Lazycat 应用市场</a> 搜索并部署 <strong>Port Forwarder(局域网端口转发工具)</strong></li>
+                    <li>配置端口转发规则,将宿主机外部 IP 的 <strong>TCP 53</strong> 和 <strong>UDP 53</strong> 端口映射到 Blocky 应用的 53 端口</li>
+                    <li>保存配置并启动 Port Forwarder</li>
+                </ol>
+
+                <div class="alert alert-success">
+                    <strong>✅ 配置完成后:</strong> 您可以在局域网中将设备的 DNS 服务器设置为 Lazycat 平台的<strong>局域网 IP 地址</strong>,即可使用 Blocky 进行 DNS 解析和广告拦截。
+                </div>
+
+                <h4>步骤 2: 配置设备 DNS</h4>
+                <p>在您的路由器或设备上,将 DNS 服务器设置为 Lazycat 平台的局域网 IP 地址(例如: 192.168.1.100)。</p>
+
+                <h4>示例:测试 DNS 查询</h4>
+                <pre><code># 使用 dig 命令测试(假设服务器 IP 是 192.168.1.100)
+dig @192.168.1.100 -p 53 example.com
+
+# 测试拦截功能(查询已知广告域名)
+dig @192.168.1.100 -p 53 doubleclick.net
+
+# 如果返回 0.0.0.0,说明拦截成功
+</code></pre>
+
+                <h3>查看拦截日志</h3>
+                <p>在 Lazycat 平台的应用管理界面,可以查看 Blocky 的日志输出,日志中会显示:</p>
+                <ul>
+                    <li>被拦截的域名查询(标记为 <code>response_reason=BLOCKED</code>)</li>
+                    <li>正常解析的域名</li>
+                    <li>上游 DNS 服务器响应时间</li>
+                    <li>缓存命中情况</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>配置说明</h2>
+                <p>Blocky 的配置文件为 <code>config.yml</code>,在 Lazycat 平台部署时已预配置。</p>
+
+                <div class="alert alert-info">
+                    <strong>📁 配置文件路径:</strong> 在 Lazycat 平台上,实际的配置文件位于:<br>
+                    <code>/data/appvar/cloud.lazycat.app.liu.blocky/config/config.yml</code>
+                </div>
+
+                <h3>上游 DNS 服务器</h3>
+                <p>默认配置了多个可靠的 DNS 服务器:</p>
+                <ul>
+                    <li><strong>Google DNS:</strong> 8.8.8.8</li>
+                    <li><strong>Cloudflare DNS:</strong> 1.1.1.1</li>
+                    <li><strong>DNS over TLS:</strong> fdns1.dismail.de:853</li>
+                    <li><strong>DNS over HTTPS:</strong> dns.digitale-gesellschaft.ch</li>
+                </ul>
+
+                <h3>广告拦截列表</h3>
+                <p>默认启用了 <a href="https://github.com/StevenBlack/hosts" target="_blank">StevenBlack hosts</a> 拦截列表,包含:</p>
+                <ul>
+                    <li>广告服务器</li>
+                    <li>追踪器</li>
+                    <li>恶意域名</li>
+                </ul>
+
+                <div class="alert alert-info">
+                    <strong>💡 关于拦截列表文件:</strong>
+                    <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+                        <li><strong>默认配置:</strong> 为了解决访问外网的问题,安装包中默认使用本地文件 <code>/lzcapp/pkg/content/config/hosts</code>,这是从 StevenBlack 项目预先下载的。</li>
+                        <li><strong>在线更新:</strong> 如果您的 Lazycat 平台能够访问外网,可以在配置文件中修改为公网地址:<br>
+                            <code>https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts</code><br>
+                            这样可以自动获取最新的拦截列表。
+                        </li>
+                    </ul>
+                </div>
+
+                <h3>自定义配置</h3>
+                <p>您可以在配置文件中自定义:</p>
+                <ul>
+                    <li>添加更多拦截列表</li>
+                    <li>配置客户端分组规则</li>
+                    <li>设置条件 DNS 转发</li>
+                    <li>配置自定义域名解析</li>
+                    <li>调整缓存策略</li>
+                </ul>
+
+                <div class="alert alert-info">
+                    <strong>💡 提示:</strong> 详细的配置说明请参考 <a href="https://0xerr0r.github.io/blocky/latest/configuration/" target="_blank">Blocky 官方配置文档</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>常见问题</h2>
+
+                <h3>Q: 如何临时禁用广告拦截?</h3>
+                <p><strong>A:</strong> 通过 API 禁用拦截功能:</p>
+                <pre><code id="curl-disable">curl http://YOUR_DOMAIN:4000/api/blocking/disable</code></pre>
+                <p>重新启用:</p>
+                <pre><code id="curl-enable">curl http://YOUR_DOMAIN:4000/api/blocking/enable</code></pre>
+
+                <h3>Q: 如何刷新拦截列表?</h3>
+                <p><strong>A:</strong> 拦截列表默认每 24 小时自动刷新。手动刷新可以使用:</p>
+                <pre><code id="curl-refresh">curl -X POST http://YOUR_DOMAIN:4000/api/lists/refresh</code></pre>
+
+                <h3>Q: 某些正常网站被错误拦截怎么办?</h3>
+                <p><strong>A:</strong> 在配置文件的 <code>blocking.allowlists</code> 部分添加白名单规则,详见配置文件注释。</p>
+
+                <h3>Q: 如何查看当前拦截统计?</h3>
+                <p><strong>A:</strong> 访问 Prometheus 指标端点查看详细统计:</p>
+                <pre><code id="curl-metrics">curl http://YOUR_DOMAIN:4000/metrics</code></pre>
+            </div>
+
+            <div class="card">
+                <h2>相关链接</h2>
+                <ul>
+                    <li><a href="https://0xerr0r.github.io/blocky/" target="_blank">Blocky 官方网站</a></li>
+                    <li><a href="https://github.com/0xERR0R/blocky" target="_blank">Blocky GitHub 仓库</a></li>
+                    <li><a href="https://0xerr0r.github.io/blocky/latest/configuration/" target="_blank">Blocky 配置文档</a></li>
+                    <li><a href="https://lazycat.cloud" target="_blank">Lazycat 平台</a></li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>致谢</h2>
+                <p>本项目基于 <a href="https://github.com/0xERR0R/blocky" target="_blank">Blocky</a> 开源项目进行移植和封装。感谢 Blocky 开发团队和开源社区的贡献者们创造了如此优秀的 DNS 代理工具。</p>
+                <p>特别感谢:</p>
+                <ul>
+                    <li>Blocky 项目维护者 <a href="https://github.com/0xERR0R" target="_blank">0xERR0R</a> 及所有贡献者</li>
+                    <li>提供各种拦截列表的社区项目,如 <a href="https://github.com/StevenBlack/hosts" target="_blank">StevenBlack hosts 项目</a></li>
+                    <li>Lazycat 平台提供的应用部署能力</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- English Content -->
+        <div class="content-en hidden">
+            <div class="card" style="background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-left: 5px solid var(--primary-color);">
+                <h2 style="color: var(--primary-color); margin-bottom: 1.5rem;">🚀 Quick Access</h2>
+                <p style="font-size: 1.1rem; margin-bottom: 1rem;">Access Blocky management API and monitoring interface:</p>
+                <div style="text-align: center; margin: 1.5rem 0;">
+                    <a href="#" id="api-link-en" target="_blank" class="btn" style="font-size: 1.2rem; padding: 1rem 2rem; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);">
+                        📡 Visit Blocky API Console
+                    </a>
+                </div>
+                <div style="background: white; padding: 1rem; border-radius: 6px; margin-top: 1rem;">
+                    <p style="margin: 0.5rem 0;"><strong>API Endpoint:</strong> <code id="api-url-en"></code></p>
+                    <p style="margin: 0.5rem 0;"><strong>Metrics:</strong> <code id="metrics-url-en"></code></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Introduction</h2>
+                <p>Blocky is a high-performance DNS proxy server designed for local network environments to block ads, trackers, and malicious domains. Built with Go, it offers excellent performance with minimal resource consumption.</p>
+                <div class="alert alert-success">
+                    <strong>🎉 One-Click Deployment!</strong> Deploy Blocky quickly on <a href="https://lazycat.cloud/appstore" target="_blank">Lazycat App Marketplace</a> without complex Docker configurations.
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Key Features</h2>
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <h4>🛡️ Ad & Tracker Blocking</h4>
+                        <p>Block ads, trackers, and malicious domains using customizable denylists</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>📋 Multiple List Formats</h4>
+                        <p>Support for various blocklist formats including hosts files and domain lists</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>👥 Client Groups</h4>
+                        <p>Configure different blocking rules and upstream servers for different clients</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>⚡ DNS Caching</h4>
+                        <p>Built-in intelligent caching mechanism to improve DNS query speed</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>🔀 Conditional Forwarding</h4>
+                        <p>Route domains to specific upstream DNS servers based on conditions</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>🔒 DoH & DoT Support</h4>
+                        <p>Support for DNS over HTTPS (DoH) and DNS over TLS (DoT)</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>📊 Query Logging</h4>
+                        <p>Optional query logging for monitoring and debugging</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>🔌 REST API</h4>
+                        <p>REST API interface for management and monitoring</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>📈 Prometheus Metrics</h4>
+                        <p>Built-in Prometheus metrics export for monitoring integration</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Quick Start</h2>
+                <h3>Deploy on Lazycat Platform</h3>
+                <ol class="steps">
+                    <li>Visit <a href="https://lazycat.cloud/appstore" target="_blank">Lazycat App Marketplace</a></li>
+                    <li>Search and select "Blocky"</li>
+                    <li>Click "One-Click Deploy" button</li>
+                    <li>Adjust configuration parameters as needed</li>
+                    <li>Start using after deployment completes</li>
+                </ol>
+            </div>
+
+            <div class="card">
+                <h2>Usage Guide</h2>
+
+                <h3>Access API and Monitoring</h3>
+                <p>After successful deployment, you can access Blocky's management interface:</p>
+
+                <div class="alert alert-info">
+                    <strong>📌 Access URLs:</strong> Using your app domain as an example:
+                    <ul style="margin-top: 0.5rem;">
+                        <li><strong>API Address:</strong> <code id="usage-api-url-en"></code></li>
+                        <li><strong>Prometheus Metrics:</strong> <code id="usage-metrics-url-en"></code></li>
+                    </ul>
+                </div>
+
+                <h3>Common API Endpoints</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Endpoint</th>
+                                <th>Method</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/api/blocking/status</code></td>
+                                <td>GET</td>
+                                <td>Get blocking status</td>
+                            </tr>
+                            <tr>
+                                <td><code>/api/blocking/enable</code></td>
+                                <td>GET</td>
+                                <td>Enable blocking</td>
+                            </tr>
+                            <tr>
+                                <td><code>/api/blocking/disable</code></td>
+                                <td>GET</td>
+                                <td>Temporarily disable blocking</td>
+                            </tr>
+                            <tr>
+                                <td><code>/api/lists/refresh</code></td>
+                                <td>POST</td>
+                                <td>Refresh blocklists</td>
+                            </tr>
+                            <tr>
+                                <td><code>/api/query?domain=example.com</code></td>
+                                <td>GET</td>
+                                <td>Test domain query</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Configure DNS Client</h3>
+                <p>To use Blocky as your DNS server, you need to point your LAN devices' DNS settings to the Blocky server.</p>
+
+                <div class="alert alert-warning">
+                    <strong>⚠️ Important:</strong> Blocky's DNS port (53) is only accessible within the container network by default. To use it on your LAN, you need to configure port forwarding.
+                </div>
+
+                <h4>Step 1: Deploy Port Forwarder Application</h4>
+                <p>To allow LAN devices to use Blocky as their DNS server, you need to:</p>
+                <ol class="steps">
+                    <li>Search and deploy <strong>Port Forwarder</strong> from <a href="https://lazycat.cloud/appstore" target="_blank">Lazycat App Marketplace</a></li>
+                    <li>Configure port forwarding rules to map the host's external IP <strong>TCP 53</strong> and <strong>UDP 53</strong> ports to Blocky application's port 53</li>
+                    <li>Save the configuration and start Port Forwarder</li>
+                </ol>
+
+                <div class="alert alert-success">
+                    <strong>✅ After Configuration:</strong> You can set your devices' DNS server to the Lazycat platform's <strong>LAN IP address</strong>, enabling DNS resolution and ad blocking through Blocky.
+                </div>
+
+                <h4>Step 2: Configure Device DNS</h4>
+                <p>On your router or device, set the DNS server to the Lazycat platform's LAN IP address (e.g., 192.168.1.100).</p>
+
+                <h4>Example: Test DNS Query</h4>
+                <pre><code># Test using dig command (assuming server IP is 192.168.1.100)
+dig @192.168.1.100 -p 53 example.com
+
+# Test blocking feature (query known ad domain)
+dig @192.168.1.100 -p 53 doubleclick.net
+
+# If returns 0.0.0.0, blocking is working
+</code></pre>
+
+                <h3>View Blocking Logs</h3>
+                <p>In the Lazycat Platform app management interface, you can view Blocky's log output, which shows:</p>
+                <ul>
+                    <li>Blocked domain queries (marked as <code>response_reason=BLOCKED</code>)</li>
+                    <li>Normally resolved domains</li>
+                    <li>Upstream DNS server response times</li>
+                    <li>Cache hit statistics</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>Configuration</h2>
+                <p>Blocky's configuration file is <code>config.yml</code>, pre-configured when deployed on Lazycat Platform.</p>
+
+                <div class="alert alert-info">
+                    <strong>📁 Configuration File Path:</strong> On Lazycat Platform, the actual configuration file is located at:<br>
+                    <code>/data/appvar/cloud.lazycat.app.liu.blocky/config/config.yml</code>
+                </div>
+
+                <h3>Upstream DNS Servers</h3>
+                <p>Multiple reliable DNS servers configured by default:</p>
+                <ul>
+                    <li><strong>Google DNS:</strong> 8.8.8.8</li>
+                    <li><strong>Cloudflare DNS:</strong> 1.1.1.1</li>
+                    <li><strong>DNS over TLS:</strong> fdns1.dismail.de:853</li>
+                    <li><strong>DNS over HTTPS:</strong> dns.digitale-gesellschaft.ch</li>
+                </ul>
+
+                <h3>Ad Blocklists</h3>
+                <p>Enabled <a href="https://github.com/StevenBlack/hosts" target="_blank">StevenBlack hosts</a> blocklist by default, including:</p>
+                <ul>
+                    <li>Ad servers</li>
+                    <li>Trackers</li>
+                    <li>Malicious domains</li>
+                </ul>
+
+                <div class="alert alert-info">
+                    <strong>💡 About Blocklist Files:</strong>
+                    <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+                        <li><strong>Default Configuration:</strong> To solve internet access issues, the package uses a local file by default: <code>/lzcapp/pkg/content/config/hosts</code>, which is pre-downloaded from the StevenBlack project.</li>
+                        <li><strong>Online Updates:</strong> If your Lazycat platform can access the internet, you can modify the configuration file to use the public URL:<br>
+                            <code>https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts</code><br>
+                            This allows automatic updates to the latest blocklist.
+                        </li>
+                    </ul>
+                </div>
+
+                <h3>Custom Configuration</h3>
+                <p>You can customize in the configuration file:</p>
+                <ul>
+                    <li>Add more blocklists</li>
+                    <li>Configure client group rules</li>
+                    <li>Set up conditional DNS forwarding</li>
+                    <li>Configure custom domain resolution</li>
+                    <li>Adjust caching policies</li>
+                </ul>
+
+                <div class="alert alert-info">
+                    <strong>💡 Tip:</strong> For detailed configuration instructions, refer to <a href="https://0xerr0r.github.io/blocky/latest/configuration/" target="_blank">Blocky Official Configuration Documentation</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>FAQ</h2>
+
+                <h3>Q: How to temporarily disable ad blocking?</h3>
+                <p><strong>A:</strong> Disable blocking via API:</p>
+                <pre><code id="curl-disable-en">curl http://YOUR_DOMAIN:4000/api/blocking/disable</code></pre>
+                <p>Re-enable:</p>
+                <pre><code id="curl-enable-en">curl http://YOUR_DOMAIN:4000/api/blocking/enable</code></pre>
+
+                <h3>Q: How to refresh blocklists?</h3>
+                <p><strong>A:</strong> Blocklists refresh automatically every 24 hours. To manually refresh:</p>
+                <pre><code id="curl-refresh-en">curl -X POST http://YOUR_DOMAIN:4000/api/lists/refresh</code></pre>
+
+                <h3>Q: What if legitimate websites are incorrectly blocked?</h3>
+                <p><strong>A:</strong> Add allowlist rules in the <code>blocking.allowlists</code> section of the configuration file. See config comments for details.</p>
+
+                <h3>Q: How to view current blocking statistics?</h3>
+                <p><strong>A:</strong> Access the Prometheus metrics endpoint for detailed statistics:</p>
+                <pre><code id="curl-metrics-en">curl http://YOUR_DOMAIN:4000/metrics</code></pre>
+            </div>
+
+            <div class="card">
+                <h2>Related Links</h2>
+                <ul>
+                    <li><a href="https://0xerr0r.github.io/blocky/" target="_blank">Blocky Official Website</a></li>
+                    <li><a href="https://github.com/0xERR0R/blocky" target="_blank">Blocky GitHub Repository</a></li>
+                    <li><a href="https://0xerr0r.github.io/blocky/latest/configuration/" target="_blank">Blocky Configuration Documentation</a></li>
+                    <li><a href="https://lazycat.cloud" target="_blank">Lazycat Platform</a></li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>Acknowledgments</h2>
+                <p>This project is based on the open-source <a href="https://github.com/0xERR0R/blocky" target="_blank">Blocky</a> project. Thanks to the Blocky development team and open-source community contributors for creating such an excellent DNS proxy tool.</p>
+                <p>Special thanks to:</p>
+                <ul>
+                    <li>Blocky project maintainer <a href="https://github.com/0xERR0R" target="_blank">0xERR0R</a> and all contributors</li>
+                    <li>Community projects providing various blocklists, such as <a href="https://github.com/StevenBlack/hosts" target="_blank">StevenBlack hosts project</a></li>
+                    <li>Lazycat Platform for providing app deployment capabilities</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="content-zh">
+            <p>&copy; 2025 Lazycat Apps | 基于 <a href="https://github.com/0xERR0R/blocky" target="_blank">Blocky</a> 开源项目</p>
+            <p>遇到问题? 访问 <a href="https://lazycat.cloud" target="_blank">Lazycat 平台</a> 获取帮助</p>
+        </div>
+        <div class="content-en hidden">
+            <p>&copy; 2025 Lazycat Apps | Based on <a href="https://github.com/0xERR0R/blocky" target="_blank">Blocky</a> open-source project</p>
+            <p>Need help? Visit <a href="https://lazycat.cloud" target="_blank">Lazycat Platform</a></p>
+        </div>
+    </div>
+
+    <script>
+        let currentLang = 'zh';
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            const zhElements = document.querySelectorAll('.content-zh');
+            const enElements = document.querySelectorAll('.content-en');
+
+            if (currentLang === 'en') {
+                zhElements.forEach(el => el.classList.add('hidden'));
+                enElements.forEach(el => el.classList.remove('hidden'));
+            } else {
+                zhElements.forEach(el => el.classList.remove('hidden'));
+                enElements.forEach(el => el.classList.add('hidden'));
+            }
+        }
+
+        // Initialize all dynamic domain references
+        function updateDomainReferences() {
+            const currentDomain = window.location.hostname;
+            const apiBaseUrl = `http://${currentDomain}:4000`;
+
+            // Update main quick access card
+            const apiLink = document.getElementById('api-link');
+            const apiLinkEn = document.getElementById('api-link-en');
+            if (apiLink) apiLink.href = apiBaseUrl;
+            if (apiLinkEn) apiLinkEn.href = apiBaseUrl;
+
+            // Update URL displays
+            const urlUpdates = {
+                'api-url': `${apiBaseUrl}/api/`,
+                'metrics-url': `${apiBaseUrl}/metrics`,
+                'api-url-en': `${apiBaseUrl}/api/`,
+                'metrics-url-en': `${apiBaseUrl}/metrics`,
+                'usage-api-url': `${apiBaseUrl}/api/`,
+                'usage-metrics-url': `${apiBaseUrl}/metrics`,
+                'usage-api-url-en': `${apiBaseUrl}/api/`,
+                'usage-metrics-url-en': `${apiBaseUrl}/metrics`
+            };
+
+            Object.keys(urlUpdates).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = urlUpdates[id];
+            });
+
+            // Update curl command examples
+            const curlCommands = {
+                'curl-disable': `curl ${apiBaseUrl}/api/blocking/disable`,
+                'curl-enable': `curl ${apiBaseUrl}/api/blocking/enable`,
+                'curl-refresh': `curl -X POST ${apiBaseUrl}/api/lists/refresh`,
+                'curl-metrics': `curl ${apiBaseUrl}/metrics`,
+                'curl-disable-en': `curl ${apiBaseUrl}/api/blocking/disable`,
+                'curl-enable-en': `curl ${apiBaseUrl}/api/blocking/enable`,
+                'curl-refresh-en': `curl -X POST ${apiBaseUrl}/api/lists/refresh`,
+                'curl-metrics-en': `curl ${apiBaseUrl}/metrics`
+            };
+
+            Object.keys(curlCommands).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = curlCommands[id];
+            });
+        }
+
+        // Run on page load
+        document.addEventListener('DOMContentLoaded', updateDomainReferences);
+    </script>
+</body>
+</html>
